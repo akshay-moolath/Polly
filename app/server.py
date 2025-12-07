@@ -1,23 +1,23 @@
-# app/server.py
 from fastapi import FastAPI, WebSocket
 import json
+import asyncio
+
 
 app = FastAPI()
 
-@app.websocket("/ws")
+clients = set()
+
+@app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
+
     await websocket.accept()
+
+    clients.add(websocket)
+
+    await websocket.send_text(json.dumps({"type": "system", "text": "Welcome to the chat!"}))
+
     while True:
         data = await websocket.receive_text()
         msg = json.loads(data)
-        if msg.get("type") == "Hello from Client":
-            response = {
-                "type": "Hello from Server!",
-                "id": msg.get("id")
-                }
-            
-            await websocket.send_text(json.dumps(response))
-        elif msg.get("type") == "ping":
-            await websocket.send_text(json.dumps({"type": "pong", "id": msg.get("id")}))
-        else:
-            await websocket.send_text(json.dumps({"type": "unknown"}))
+        text = json.dumps(msg)
+        await asyncio.gather(*[c.send_text(text) for c in clients])
