@@ -4,14 +4,12 @@ import json
 import sys
 
 async def run(user, host="127.0.0.1", port=8000):
-    try:
         uri = f"ws://{host}:{port}/ws/chat"
         async with websockets.connect(uri) as ws:
             print(f"Connected as : {user} Type messages and press Enter.\n")
 
             async def listen():#client listening to server for messages
-                try:
-                    while True:
+                while True:
                         message = await ws.recv()
                         parsed = json.loads(message)
                         if parsed.get("type") == "system":
@@ -21,30 +19,19 @@ async def run(user, host="127.0.0.1", port=8000):
                             text = parsed.get("text")
                             print(f"{sender}: {text}")
                         else:
-                            print("recv:", parsed)
-                except websockets.ConnectionClosed:
-                    print("Connection closed (listener).")
-                    return
+                            print("recv:", parsed) 
 
             listener = asyncio.create_task(listen()) #client can listen as well as send messages
-            try:
-                    
-                while True: #makes sure message is sent only if input is not empty
+            while True: #makes sure message is sent only if input is not empty
+                try:
                     text = await asyncio.get_event_loop().run_in_executor(None, input)
                     if text.strip() == "":
-                        continue
+                            continue
                     msg = {"type": "message", "user": user, "text": text}
-                    try:
-                        await ws.send(json.dumps(msg))
-                    except websockets.ConnectionClosed:
-                            print("Connection closed while sending.")
-                            break
-            except (KeyboardInterrupt, EOFError):
-                print("Client exiting.")
-            finally:
-                listener.cancel()
-    except Exception as exc:
-        print("Connection failed:", exc)
+                    await ws.send(json.dumps(msg))
+                except websockets.ConnectionClosed:
+                        print("Connection closed while sending.")
+                        break       
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
