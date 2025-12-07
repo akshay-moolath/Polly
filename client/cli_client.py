@@ -1,18 +1,54 @@
-# client/cli_client.py
 import asyncio
 import websockets
 import json
-import uuid
+import sys
 
-async def main():
-    uri = "ws://127.0.0.1:8000/ws"
-    async with websockets.connect(uri) as websocket:
-        hello_msg = {"type": "Hello from Client", "id": str(uuid.uuid4())}
-        await websocket.send(json.dumps(hello_msg))
-        print("Sent:", hello_msg)
-        while True:
-            message = await websocket.recv()
-            print("Received:", json.loads(message))
+async def run(user, host="127.0.0.1", port=8000):
+    try:
+        uri = f"ws://{host}:{port}/ws/chat"
+        async with websockets.connect(uri) as ws:
+            print(f"Connected as : {user} Type messages and press Enter.\n")
+
+            async def listen():#client listening to server for messages
+                try:
+                    while True:
+                        message = await ws.recv()
+                        parsed = json.loads(message)
+                        if parsed.get("type") == "system":
+                            print(f"[system] {parsed.get('text')}")
+                        elif parsed.get("type") == "message":
+                            sender = parsed.get("user")
+                            text = parsed.get("text")
+                            print(f"{sender}: {text}")
+                        else:
+                            print("recv:", parsed)
+                except websockets.ConnectionClosed:
+                    print("Connection closed (listener).")
+                    return
+
+            listener = asyncio.create_task(listen()) #client can listen as well as send messages
+            try:
+                    
+                while True: #makes sure message is sent only if input is not empty
+                    text = await asyncio.get_event_loop().run_in_executor(None, input)
+                    if text.strip() == "":
+                        continue
+                    msg = {"type": "message", "user": user, "text": text}
+                    try:
+                        await ws.send(json.dumps(msg))
+                    except websockets.ConnectionClosed:
+                            print("Connection closed while sending.")
+                            break
+            except (KeyboardInterrupt, EOFError):
+                print("Client exiting.")
+            finally:
+                listener.cancel()
+    except Exception as exc:
+        print("Connection failed:", exc)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if len(sys.argv) < 2:
+        print("Usage: python client/cli_client.py <username>")
+        sys.exit(1)
+    username = sys.argv[1]
+    asyncio.run(run(username))

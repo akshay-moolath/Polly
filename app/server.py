@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import json
 import asyncio
 
@@ -6,6 +6,15 @@ import asyncio
 app = FastAPI()
 
 clients = set()
+
+async def broadcast(text: str):
+    for client in list(clients):
+        try:
+            await client.send_text(text)
+        except Exception:
+            clients.discard(client)
+
+
 
 @app.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
@@ -16,8 +25,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.send_text(json.dumps({"type": "system", "text": "Welcome to the chat!"}))
 
-    while True:
-        data = await websocket.receive_text()
-        msg = json.loads(data)
-        text = json.dumps(msg)
-        await asyncio.gather(*[c.send_text(text) for c in clients])
+    try:
+        while True:
+            data = await websocket.receive_text()
+            msg = json.loads(data)
+            text = json.dumps(msg)
+            await broadcast(text)
+    except:
+        clients.discard(websocket)
+        print("Client disconnected.")
