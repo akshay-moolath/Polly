@@ -10,14 +10,14 @@ async def websocket_endpoint(websocket: WebSocket):
     while True:
         data = await websocket.receive_text()
         msg = json.loads(data)
-        if msg.get("type") == "hello":
+        if msg.get("type") == "Hello from Client":
             response = {
-                "type": "helloResponse",
-                "id": msg.get("id"),
-                "payload": {"status": "ok", "message": "Hello from server!"}
-            }
+                "type": "Hello from Server!",
+                "id": msg.get("id")
+                }
+            
             await websocket.send_text(json.dumps(response))
         elif msg.get("type") == "ping":
             await websocket.send_text(json.dumps({"type": "pong", "id": msg.get("id")}))
         else:
-            await websocket.send_text(json.dumps({"type": "unknown", "payload": {"received": msg.get("type")}}))
+            await websocket.send_text(json.dumps({"type": "unknown"}))
