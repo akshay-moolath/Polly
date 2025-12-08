@@ -1,56 +1,121 @@
-let ws = null;
+const connectBtn = document.getElementById('connectBtn');
+  const sendBtn = document.getElementById('sendBtn');
+  const nameInput = document.getElementById('username');
+  const msgInput = document.getElementById('msg');
+  const chat = document.getElementById('chat');
 
-const chatBox = document.getElementById("chat");
-const usernameInput = document.getElementById("username");
-const messageInput = document.getElementById("message");
-const connectBtn = document.getElementById("connectBtn");
-const sendBtn = document.getElementById("sendBtn");
+  let ws = null;
+  let localName = '';
 
-function addMessage(text) {
-    const p = document.createElement("p");
-    p.textContent = text;
-    chatBox.appendChild(p);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
+  function formatTime() {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 
-connectBtn.onclick = () => {
-    if (ws) return; // already connected
+  function scrollToBottom(){
+    chat.scrollTop = chat.scrollHeight;
+  }
 
-    const username = usernameInput.value.trim() || "guest";
+  function addSystem(text){
+    const el = document.createElement('div');
+    el.className = 'system';
+    el.textContent = `[system] ${text}`;
+    chat.appendChild(el);
+    scrollToBottom();
+  }
 
-    ws = new WebSocket("ws://127.0.0.1:8000/ws/chat");
+  function addMessageBubble({user, text, time}, isMe){
+    const row = document.createElement('div');
+    row.className = 'msg-row' + (isMe ? ' me' : '');
 
-    ws.onopen = () => {
-        addMessage("[system] Connected as " + username);
-    };
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ' + (isMe ? 'me' : 'other');
 
-    ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === "system") {
-            addMessage("[system] " + msg.text);
-        } else if (msg.type === "message") {
-            addMessage(msg.user + ": " + msg.text);
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = user + (isMe ? ' (you)' : '');
+
+    const body = document.createElement('div');
+    body.className = 'text';
+    body.textContent = text;
+
+    const ts = document.createElement('span');
+    ts.className = 'ts';
+    ts.textContent = time;
+
+    bubble.appendChild(meta);
+    bubble.appendChild(body);
+    bubble.appendChild(ts);
+
+    row.appendChild(bubble);
+    chat.appendChild(row);
+    scrollToBottom();
+  }
+
+  connectBtn.onclick = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.close();
+      return;
+    }
+
+    localName = nameInput.value.trim() || 'guest';
+    // use same origin (works when served by FastAPI). If file://, adjust host.
+    const uri = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/chat';
+    ws = new WebSocket(uri);
+
+    ws.addEventListener('open', () => {
+      nameInput.disabled = true;
+      connectBtn.textContent = 'Disconnect';
+      msgInput.disabled = false;
+      sendBtn.disabled = false;
+      addSystem('Connected as ' + localName);
+    });
+
+    ws.addEventListener('message', (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'system') {
+          addSystem(msg.text);
+          return;
         }
-    };
+        if (msg.type === 'message') {
+          const isMe = msg.user === localName;
+          addMessageBubble({ user: msg.user, text: msg.text, time: formatTime() }, isMe);
+        }
+      } catch (e) {
+        addSystem('Non-json message: ' + ev.data);
+      }
+    });
 
-    ws.onclose = () => {
-        addMessage("[system] Disconnected");
-        ws = null;
-    };
+    ws.addEventListener('close', () => {
+      nameInput.disabled = false;
+      connectBtn.textContent = 'Connect';
+      msgInput.disabled = true;
+      sendBtn.disabled = true;
+      addSystem('Disconnected');
+      ws = null;
+    });
 
-    sendBtn.onclick = () => {
-        if (!ws) return;
+    ws.addEventListener('error', () => {
+      addSystem('Connection error');
+    });
+  };
 
-        const text = messageInput.value.trim();
-        if (!text) return;
+  function sendMessage(){
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const text = msgInput.value.trim();
+    if (!text) return;
+    const payload = { type: 'message', user: localName, text };
+    ws.send(JSON.stringify(payload));
+    msgInput.value = '';
+  }
 
-        const username = usernameInput.value.trim() || "guest";
-        ws.send(JSON.stringify({
-            type: "message",
-            user: username,
-            text: text
-        }));
+  sendBtn.onclick = sendMessage;
 
-        messageInput.value = "";
-    };
-};
+  // Enter to send
+  msgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') connectBtn.click();
+  });

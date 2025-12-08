@@ -1,11 +1,11 @@
 :root{
       --bg:hsl(0, 0%, 100%);
       --panel:hsl(0, 0%, 100%);
-      --muted:#94a3b8;
-      --me-bg:#2563eb;
-      --me-text:#fff;
-      --other-bg:#ffffff;
-      --other-text:#e6edf3;
+      --muted:#000000;
+      --me-bg:lab(100% 0.01 -0.01);
+      --me-text:#000000;
+      --other-bg:hsl(0, 0%, 100%);
+      --other-text:#000000;
       --system-bg:transparent;
     }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,#ffffff 0%, #08121a 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
@@ -40,7 +40,7 @@
     .system{display:flex;justify-content:center;color:var(--muted);font-style:italic;margin:8px 0}
 
     /* small timestamp badge */
-    .ts{display:block;font-size:11px;color:rgba(255,255,255,0.6);margin-top:6px}
+    .ts{display:block;font-size:11px;color:rgba(0, 0, 0, 0.6);margin-top:6px}
 
     /* responsive */
     @media (max-width:600px){
