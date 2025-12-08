@@ -1,4 +1,12 @@
-const connectBtn = document.getElementById('connectBtn');
+
+
+
+
+
+  const API_BASE = '/api';
+  const token = localStorage.getItem('access_token');
+  const username = localStorage.getItem('username') || '';
+  const connectBtn = document.getElementById('connectBtn');
   const sendBtn = document.getElementById('sendBtn');
   const nameInput = document.getElementById('username');
   const msgInput = document.getElementById('msg');
@@ -119,3 +127,9 @@ const connectBtn = document.getElementById('connectBtn');
   nameInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') connectBtn.click();
   });
+  document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('username').textContent = username || 'User';
+  if (!token) { window.location.href = '/'; return; }
+  document.getElementById('logout').addEventListener('click', ()=> { localStorage.removeItem('access_token'); localStorage.removeItem('username'); window.location.href = '/'; });
+
+});
