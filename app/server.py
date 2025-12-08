@@ -1,18 +1,10 @@
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import FileResponse
+from fastapi import WebSocket, APIRouter
+from app.schemas import UserOut
+
 import json
 import asyncio
-from fastapi.staticfiles import StaticFiles
 
-
-
-app = FastAPI()
-
-@app.get("/")# connecting static pages to url/endpoint
-def home():
-    return FileResponse("static/index.html")
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
+router = APIRouter()
 
 clients = set()
 
@@ -23,9 +15,7 @@ async def broadcast(text: str):
         except Exception:
             clients.discard(client)
 
-
-
-@app.websocket("/ws/chat")
+@router.websocket("/ws/chat")
 async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.accept()
